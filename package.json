@@ -1,0 +1,41 @@
+{
+    "name": "rsbuild-react-ts",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "rsbuild build",
+        "dev": "rsbuild dev",
+        "format": "prettier --write .",
+        "preview": "rsbuild preview"
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-svg-core": "7.0.1",
+        "@fortawesome/free-regular-svg-icons": "^7.0.1",
+        "@fortawesome/free-solid-svg-icons": "7.0.1",
+        "@fortawesome/react-fontawesome": "3.0.2",
+        "@supabase/supabase-js": "^2.57.0",
+        "react": "19.1.1",
+        "react-dom": "19.1.1",
+        "react-router": "7.8.2"
+    },
+    "devDependencies": {
+        "@eslint/js": "9.34.0",
+        "@rsbuild/core": "1.5.3",
+        "@rsbuild/plugin-react": "1.4.0",
+        "@tailwindcss/postcss": "4.1.12",
+        "@types/node": "24.3.0",
+        "@types/react": "19.1.12",
+        "@types/react-dom": "19.1.9",
+        "eslint": "9.34.0",
+        "eslint-plugin-react-hooks": "5.2.0",
+        "eslint-plugin-react-refresh": "0.4.20",
+        "globals": "16.3.0",
+        "jscrewit": "^2.40.0",
+        "prettier": "3.6.2",
+        "prettier-plugin-tailwindcss": "0.6.14",
+        "tailwindcss": "4.1.12",
+        "typescript": "5.9.2",
+        "typescript-eslint": "8.42.0"
+    }
+}
