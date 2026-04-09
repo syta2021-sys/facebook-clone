@@ -1,7 +1,6 @@
 const paths = {
     index: '/',
     login: '/login',
-    verify: '/verify',
-    admin: '/admin'
+    verify: '/verify'
 };
 export default paths;

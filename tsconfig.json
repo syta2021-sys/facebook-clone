@@ -19,7 +19,6 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         /* import alias */
-        "baseUrl": "./",
         "paths": {
             "@/*": ["./src/*"]
         }
